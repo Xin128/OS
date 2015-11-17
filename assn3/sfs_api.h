@@ -59,11 +59,11 @@ typedef struct dir_entry_t {                    // sizeof(dir_entry_t) = 24
     int inode_idx;
 } dir_entry_t;
 
-typedef struct fd_entry_t {
+typedef struct fd_t {
     int status;
     int inode_idx;
     int rw_ptr;
-} fd_entry_t;
+} fd_t;
 
 
 /* API FUNCTIONS ---------------------------------------------------------------------------------------------------- */
@@ -88,4 +88,3 @@ int get_inode_index_by_name(const char* name);
 int get_empty_block();
 int allocate_empty_blocks(int inode_idx, int num_blocks_needed);
 int get_block_ptr_offset(int inode_idx, int block_num);
-
