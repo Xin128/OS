@@ -37,32 +37,32 @@
 /* STRUCTS ---------------------------------------------------------------------------------------------------------- */
 
 typedef struct super_block_t {
-    unsigned int magic;
-    unsigned int block_size;
-    unsigned int fs_size;
-    unsigned int inode_table_len;
-    unsigned int root_dir_inode;
+    int magic;
+    int block_size;
+    int fs_size;
+    int inode_table_len;
+    int root_dir_inode;
 } super_block_t;
 
 typedef struct inode_t {                        // sizeof(inode_t) = 18*4 = 72
-    unsigned int mode;
-    unsigned int link_cnt;
-    unsigned int uid;
-    unsigned int gid;
-    unsigned int size;
-    unsigned int direct_ptrs[DIRECT_PTRS];      // point to block numbers
-    unsigned int indirect_ptr;
+    int mode;
+    int link_cnt;
+    int uid;
+    int gid;
+    int size;
+    int direct_ptrs[DIRECT_PTRS];      // point to block numbers
+    int indirect_ptr;
 } inode_t;
 
 typedef struct dir_entry_t {                    // sizeof(dir_entry_t) = 24
     char name[MAXFILENAME+1+MAXEXT];
-    unsigned int inode_idx;
+    int inode_idx;
 } dir_entry_t;
 
 typedef struct fd_entry_t {
-    unsigned int status;
-    unsigned int inode_idx;
-    unsigned int rw_ptr;
+    int status;
+    int inode_idx;
+    int rw_ptr;
 } fd_entry_t;
 
 

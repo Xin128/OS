@@ -187,7 +187,6 @@ int allocate_empty_blocks(int inode_idx, int num_blocks_needed) {
 	temp = &inode_table[inode_idx];
 	temp->indirect_ptr = ptrs[num-1];
 	memcpy((void*)&inode_table[inode_idx], (void*)temp, sizeof(inode_t));
-	printf("indirect: %d == %d\n", ptrs[num-1], inode_table[inode_idx].indirect_ptr);
 	//free(temp);
     }
 

@@ -85,13 +85,13 @@ main(int argc, char **argv)
     names[i] = rand_name();
     fds[i] = sfs_fopen(names[i]);
     if (fds[i] < 0) {
-      fprintf(stderr, "ERROR: creating first test file %s\n", names[i]);
+      fprintf(stderr, "ERROR: creating first test file %s on it %d\n", names[i], i);
       error_count++;
     }
     tmp = sfs_fopen(names[i]);
     if (tmp >= 0 && tmp != fds[i]) {
       printf("File id: tmp = %d, fds[i] = %d\n", tmp, fds[i]);
-      fprintf(stderr, "ERROR: file %s was opened twice on it %d\n", names[i], i);
+      fprintf(stderr, "ERROR: file %s was opened twice", names[i]);
       error_count++;
     }
     filesize[i] = (rand() % (MAX_BYTES-MIN_BYTES)) + MIN_BYTES;
@@ -115,7 +115,6 @@ main(int argc, char **argv)
       else {
         chunksize = (rand() % (filesize[i] - j)) + 1;
       }
-
       if ((buffer = malloc(chunksize)) == NULL) {
         fprintf(stderr, "ABORT: Out of memory!\n");
         exit(-1);
