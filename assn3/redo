@@ -1,0 +1,11 @@
+#!/bin/bash
+
+clear
+make clean
+make
+printf "\n"
+./sfs tmp/mntpt -d
+make test1
+printf "\n"
+clear
+./sfs_test1

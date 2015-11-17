@@ -1,7 +1,7 @@
 /* DEFINES ---------------------------------------------------------------------------------------------------------- */
 
 #define MAX_FILES 			100                             // arbitrary
-#define MAX_OPEN_FILES		10
+#define MAX_OPEN_FILES		32	// 10
 #define MAXFILENAME			16
 #define MAXEXT				3
 #define DIRECT_PTRS     	12

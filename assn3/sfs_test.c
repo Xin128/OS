@@ -90,7 +90,8 @@ main(int argc, char **argv)
     }
     tmp = sfs_fopen(names[i]);
     if (tmp >= 0 && tmp != fds[i]) {
-      fprintf(stderr, "ERROR: file %s was opened twice\n", names[i]);
+      printf("File id: tmp = %d, fds[i] = %d\n", tmp, fds[i]);
+      fprintf(stderr, "ERROR: file %s was opened twice on it %d\n", names[i], i);
       error_count++;
     }
     filesize[i] = (rand() % (MAX_BYTES-MIN_BYTES)) + MIN_BYTES;

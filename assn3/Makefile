@@ -5,20 +5,28 @@ LDFLAGS = `pkg-config fuse --cflags --libs`
 # use -lm at link time to link math.h library functions
 
 # Uncomment on of the following three lines to compile
-#SOURCES= disk_emu.c sfs_api.c sfs_test.c sfs_api.h
-#SOURCES= disk_emu.c sfs_api.c sfs_test2.c sfs_api.h
+SOURCES_TEST1= disk_emu.c sfs_api.c sfs_test.c sfs_api.h
+SOURCES_TEST2= disk_emu.c sfs_api.c sfs_test2.c sfs_api.h
 SOURCES= disk_emu.c sfs_api.c fuse_wrappers.c sfs_api.h
 
 OBJECTS=$(SOURCES:.c=.o)
+OBJECTS_TEST1=$(SOURCES_TEST1:.c=.o)
+OBJECTS_TEST2=$(SOURCES_TEST2:.c=.o)
 EXECUTABLE=sfs
 
-all: $(SOURCES) $(HEADERS) $(EXECUTABLE)
+all: $(EXECUTABLE)
 
 $(EXECUTABLE): $(OBJECTS)
-	gcc $(OBJECTS) $(LDFLAGS) -o $@
+	gcc $(OBJECTS) -lm $(LDFLAGS) -o $@
 
 .c.o:
-	gcc $(CFLAGS) $< -o $@
+	gcc -lm $(CFLAGS) $< -o $@
+
+test1: $(OBJECTS_TEST1)
+	gcc $(OBJECTS_TEST1) -lm $(LDFLAGS) -o sfs_test1
+
+test2: $(OBJECTS_TEST2)
+	gcc $(OBJECTS_TEST2) -lm $(LDFLAGS) -o sfs_test2
 
 clean:
-	rm -rf *.o *~ $(EXECUTABLE)
+	rm -rf *.o *~ $(EXECUTABLE) sfs_test1 sfs_test2
