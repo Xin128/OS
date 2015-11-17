@@ -65,6 +65,10 @@ void write_inode_by_index(int inode_idx, inode_t* inodeToWrite)
 // allows us to read and write to disk a single block at a time
 void write_dir_entry_by_index(int dir_idx)
 {
+    int i;
+    int tot_entries = inode_table[ROOT_NUM].size / sizeof(dir_entry_t);
+    for (i=0; i<=tot_entries; i++)
+	printf("inode_idx %d @ dir_idx %d\n", root_dir[i].inode_idx, i);
     dir_entry_t *dirEntriesFromDisk;
     char buf[BLOCK_SIZE];
 
@@ -471,6 +475,7 @@ int sfs_fopen(char *name)
 	printf("root dir check: %d == %d\n", root_dir[num_entries+1].inode_idx, inode_idx);
         strcpy(root_dir[num_entries+1].name, name);
         write_dir_entry_by_index(num_entries+1);                              // write new directory entry to disk
+	printf("root dir check2: %d == %d\n", root_dir[num_entries+1].inode_idx, inode_idx);
 
         inode_table[ROOT_NUM].size += sizeof(dir_entry_t);
         write_inode_by_index(ROOT_NUM, &inode_table[inode_idx]);            // write new inode to disk
