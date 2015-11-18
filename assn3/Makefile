@@ -12,7 +12,7 @@ SOURCES= disk_emu.c sfs_api.c fuse_wrappers.c sfs_api.h
 OBJECTS=$(SOURCES:.c=.o)
 OBJECTS_TEST1=$(SOURCES_TEST1:.c=.o)
 OBJECTS_TEST2=$(SOURCES_TEST2:.c=.o)
-EXECUTABLE=sfs
+EXECUTABLE=sfs_laragox
 
 all: $(EXECUTABLE)
 
