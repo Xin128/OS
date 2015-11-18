@@ -79,9 +79,9 @@ int sfs_remove(char *file);
 
 /* USER-DEFINED HELPER FUNCTIONS ------------------------------------------------------------------------------------ */
 
-void write_inode_by_index(int inode_idx, inode_t* inodeToWrite);
+void write_inode_by_index(int inode_idx);
 void write_dir_entry_by_index(int dir_idx);
-void write_bitmap_by_index(int bit_idx, char* bitToWrite);
+void write_bitmap_by_index(int bit_idx);
 int get_inode_index_by_name(const char* name);
 int get_empty_block();
 int allocate_empty_blocks(int inode_idx, int num_blocks_needed);
