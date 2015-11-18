@@ -109,7 +109,6 @@ main(int argc, char **argv)
 
   for (i = 0; i < 2; i++) {
     for (j = 0; j < filesize[i]; j += chunksize) {
-      //printf("filesize: %d\n", filesize[i]);
       if ((filesize[i] - j) < 10) {
         chunksize = filesize[i] - j;
       }
@@ -294,7 +293,7 @@ main(int argc, char **argv)
     if (fds[i] >= 0) {
       readsize = sfs_fread(fds[i], fixedbuf, sizeof(fixedbuf));
       if (readsize != strlen(test_str)) {
-        fprintf(stderr, "ERROR: Read wrong number (%d) of bytes\n", readsize);
+        fprintf(stderr, "ERROR: Read wrong number of bytes\n");
         error_count++;
       }
 
@@ -357,7 +356,7 @@ main(int argc, char **argv)
     if (fds[i] >= 0) {
       readsize = sfs_fread(fds[i], fixedbuf, sizeof(fixedbuf));
       if (readsize < strlen(test_str)) {
-        fprintf(stderr, "ERROR: Read wrong number (%d) of bytes\n", readsize);
+        fprintf(stderr, "ERROR: Read wrong number of bytes\n");
         error_count++;
       }
 

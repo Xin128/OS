@@ -1,21 +1,21 @@
 /* DEFINES ---------------------------------------------------------------------------------------------------------- */
 
-#define MAX_FILES 			100                             // arbitrary
-#define MAX_OPEN_FILES		32	// 10
-#define MAXFILENAME			16
-#define MAXEXT				3
-#define DIRECT_PTRS     	12
-#define PTR_SIZE			4
-#define MAX_FILE_SIZE   	BLOCK_SIZE*(DIRECT_PTRS + BLOCK_SIZE/PTR_SIZE)  // 12 direct ptrs (12 blocks) + 1 block of indirect ptrs (512/4 blocks)
-#define INODE_PER_BLOCK		7                               // floor((double)BLOCK_SIZE/sizeof(inode_t))
+#define MAX_FILES 			    100                             // arbitrary
+#define MAX_OPEN_FILES		  32	// 10
+#define MAXFILENAME			    16
+#define MAXEXT				      3
+#define DIRECT_PTRS     	  12
+#define PTR_SIZE			      4
+#define MAX_FILE_SIZE   	  BLOCK_SIZE*(DIRECT_PTRS + BLOCK_SIZE/PTR_SIZE)  // 12 direct ptrs (12 blocks) + 1 block of indirect ptrs (512/4 blocks)
+#define INODE_PER_BLOCK		  7                               // floor((double)BLOCK_SIZE/sizeof(inode_t))
 #define DENTRY_PER_BLOCK    21                              // floor((double)BLOCK_SIZE/sizeof(dir_entry_t))
 
-#define SFS_DISK			"sfs_disk.img"
-#define MAGIC_NUM       	0xAABB0005
-#define BLOCK_SIZE 			512
+#define SFS_DISK			      "sfs_disk.img"
+#define MAGIC_NUM       	  0xAABB0005
+#define BLOCK_SIZE 			    512
 #define TOTAL_BLOCKS        2000
-#define ROOT_NUM			0				                // for root dir inode and fd
-#define SBLOCK_ADDR			0
+#define ROOT_NUM			      0				                // for root dir inode and fd
+#define SBLOCK_ADDR			    0
 #define INODE_START_ADDR    SBLOCK_ADDR + 1                 // 1
 #define INODE_TBL_LEN       15                              // ceil((double)(sizeof(inode_t)*MAX_FILES)/BLOCK_SIZE)
 #define DIR_START_ADDR      INODE_START_ADDR + INODE_TBL_LEN    // 1 + 15 = 16
@@ -25,10 +25,8 @@
 #define DATA_BLOCKS         TOTAL_BLOCKS - DATA_START_ADDR - DATA_BITMAP_SIZE  // 2000 - 21 - 4 = 1975
 #define DATA_BITMAP_ADDR    TOTAL_BLOCKS - DATA_BITMAP_SIZE // 2000 - 4 = 1996
 
-#define OPEN            	1
-#define CLOSED          	0
-#define FREE            	1
-#define USED            	0
+#define FREE            	  1
+#define USED            	  0
 
 #define min(A,B)            ( (A)>(B) ? (B):(A) )
 #define max(A,B)            ( (A)>(B) ? (A):(B) )
@@ -60,7 +58,7 @@ typedef struct dir_entry_t {                    // sizeof(dir_entry_t) = 24
 } dir_entry_t;
 
 typedef struct fd_t {
-    int status;
+    char status;
     int inode_idx;
     int rw_ptr;
 } fd_t;

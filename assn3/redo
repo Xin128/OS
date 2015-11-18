@@ -10,4 +10,4 @@ make test2
 printf "\n"
 clear
 ./sfs_test1
-#./sfs_test2
+
