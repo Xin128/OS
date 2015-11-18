@@ -37,7 +37,6 @@
 // Cache the directory file, all inodes, and the bitmap
 // Also keep a table of file descriptors for open files
 
-super_block_t super_block;
 static dir_entry_t root_dir[MAX_FILES];                // directory cache - we keep ALL directory blocks in memory
 inode_t inode_table[MAX_FILES];                 // inode cache
 fd_t open_fd_table[MAX_OPEN_FILES];       // open file descriptor cache
@@ -178,7 +177,6 @@ int allocate_empty_blocks(int inode_idx, int num_blocks_needed) {
     // mark used blocks in bitmap and write entire bitmap to disk (for simplicity's sake
     for (i=0; i<num; i++) {
         memset((void*)&free_blocks[ptrs[i]], 0, sizeof(char));
-	     //free_blocks[ptrs[i]] = 0;
     }
     write_blocks(DATA_BITMAP_ADDR, DATA_BITMAP_SIZE, (void *)&free_blocks);
 
@@ -218,13 +216,13 @@ int allocate_empty_blocks(int inode_idx, int num_blocks_needed) {
 // returns ptr (int) to a block given the number block of a file; this pointer is an offset from DATA_START_ADDR
 int get_block_ptr_offset(int inode_idx, int block_num) {
     int ptr_num = -1;
-    if (block_num < DIRECT_PTRS)
-        ptr_num = inode_table[inode_idx].direct_ptrs[block_num];
+    if (block_num <= DIRECT_PTRS)
+        ptr_num = inode_table[inode_idx].direct_ptrs[block_num-1];
     else {
-        int block_off = block_num - DIRECT_PTRS - 1;
+        int block_off = block_num - DIRECT_PTRS + 1;
         char buf[BLOCK_SIZE];
         read_blocks(DATA_START_ADDR + inode_table[inode_idx].indirect_ptr, 1, (void *)buf);
-        int *ptrs = (int *) buf;
+        int *ptrs = (int *)buf;
         int i;
         for (i = 0; i < block_off; i++)
             ptrs++;
@@ -251,11 +249,8 @@ void mksfs(int fresh)
         printf("Initialising sfs...\n");
         init_fresh_disk(SFS_DISK, BLOCK_SIZE, TOTAL_BLOCKS);
         // zero all cache data structures for safety
-        bzero(&super_block, sizeof(super_block_t));
         bzero(&root_dir, sizeof(dir_entry_t) * MAX_FILES);
         bzero(&inode_table, sizeof(inode_t) * MAX_FILES);
-        //bzero(&open_fd_table, sizeof(fd_t) * MAX_FILES);
-        //bzero(&free_blocks, sizeof(char) * BLOCK_SIZE * DATA_BITMAP_SIZE);
 
         // Initialise super block
         super_block_t *sb = calloc(1, sizeof(super_block_t));
@@ -265,10 +260,6 @@ void mksfs(int fresh)
         sb->root_dir_inode = ROOT_NUM;
         char buf[BLOCK_SIZE];
         memcpy((void*)buf, (void*)sb, sizeof(super_block_t));
-        super_block.magic = MAGIC_NUM;
-        super_block.block_size = BLOCK_SIZE;
-        super_block.inode_table_len = INODE_TBL_LEN;
-        super_block.root_dir_inode = ROOT_NUM;
         printf("Writing Super block...\n");
         write_blocks(SBLOCK_ADDR, 1, (void *)buf);
 
@@ -285,8 +276,11 @@ void mksfs(int fresh)
         write_inode_by_index(ROOT_NUM);
 
         // Initialise directory
-        strcpy(root_dir[ROOT_NUM].name, root_name);
-        root_dir[ROOT_NUM].inode_idx = ROOT_NUM;
+        dir_entry_t *tmpd = calloc(1, sizeof(dir_entry_t));
+        tmpd = &root_dir[ROOT_NUM];
+        strcpy(tmpd->name, root_name);
+        tmpd->inode_idx = ROOT_NUM;
+        memcpy((void*)&root_dir[ROOT_NUM], (void*)&tmpd, sizeof(dir_entry_t));
         printf("Writing Root Directory...\n");
         write_dir_entry_by_index(ROOT_NUM);
 
@@ -337,7 +331,6 @@ void mksfs(int fresh)
 int sfs_getnextfilename(char *fname)
 {
     int num_files = inode_table[ROOT_NUM].size / sizeof(dir_entry_t);
-    printf("num files: %d\n", num_files);
     if (idx_in_dir < num_files) {
         strcpy(fname, root_dir[idx_in_dir].name);
         idx_in_dir++;
@@ -466,14 +459,19 @@ int sfs_fopen(char *name)
         free(new);
         write_dir_entry_by_index(num_entries+1);                            // write new directory entry to disk
 
-        inode_table[ROOT_NUM].size += sizeof(dir_entry_t);
+        inode_t *tmpi = calloc(1, sizeof(inode_t));
+        tmpi = &inode_table[ROOT_NUM];
+        tmpi->size += sizeof(dir_entry_t);
+        memcpy((void*)&inode_table[ROOT_NUM], (void*)tmpi, sizeof(inode_t));
         write_inode_by_index(ROOT_NUM);            // write new inode to disk
 
         // allocate for new file in inode table
-        inode_table[inode_idx].direct_ptrs[0] = i;
-        inode_table[inode_idx].mode = 0x755;
-        inode_table[inode_idx].link_cnt = 1;
-        inode_table[inode_idx].size = 0;
+        tmpi = &inode_table[inode_idx];
+        tmpi->direct_ptrs[0] = i;
+        tmpi->mode = 0x755;
+        tmpi->link_cnt = 1;
+        tmpi->size = 0;
+        memcpy((void*)&inode_table[inode_idx], (void*)tmpi, sizeof(inode_t));
         if (inode_idx > INODE_PER_BLOCK)    // write inode to disk if not in same block as root directory inode
             write_inode_by_index(inode_idx);
     }
@@ -484,10 +482,6 @@ int sfs_fopen(char *name)
     tmpf->inode_idx = inode_idx;
     tmpf->status = USED;
     memcpy((void*)&open_fd_table[fileID], (void*)tmpf, sizeof(fd_t));
-    /*open_fd_table[fileID].status = USED;
-    open_fd_table[fileID].inode_idx = inode_idx;
-    open_fd_table[fileID].rw_ptr = 0;                           // set to 0 automatically upon opening
-    */
     //printf("File created.\n");
     return fileID;
 }
@@ -512,10 +506,6 @@ int sfs_fclose(int fileID)
     tmp->inode_idx = -1;
     tmp->status = FREE;
     memcpy((void*)&open_fd_table[fileID], (void *)tmp, sizeof(fd_t));
-    /*
-    open_fd_table[fileID].rw_ptr = 0;                   // do this now, for safety
-    open_fd_table[fileID].inode_idx = -1;
-    open_fd_table[fileID].status = FREE;*/
 
     inode_t *tmpi = calloc(1, sizeof(inode_t));
     tmpi = &inode_table[ROOT_NUM];
@@ -539,8 +529,7 @@ int sfs_fread(int fileID, char *buf, int length)
     // check to make sure file is open
     if (open_fd_table[fileID].status == FREE) {
         printf("Error: No file with file ID %d open.\n", fileID);
-        printf("jesus\n");
-        return 0;
+        return -1;
     }
 
     int inode_idx = open_fd_table[fileID].inode_idx;
@@ -566,7 +555,6 @@ int sfs_fread(int fileID, char *buf, int length)
         tmpf = &open_fd_table[fileID];
         tmpf->rw_ptr += length;
         memcpy((void*)&open_fd_table[fileID], (void*)tmpf, sizeof(fd_t));
-        //open_fd_table[fileID].rw_ptr += length;
         return length;
     }
 
@@ -661,13 +649,12 @@ int sfs_fwrite(int fileID, const char *buf, int length)
         tmpi = &inode_table[inode_idx];
         tmpi->size = max(rw_ptr+length, inode_table[inode_idx].size);
         memcpy((void*)&inode_table[inode_idx], (void*)tmpi, sizeof(inode_t));
-        //inode_table[inode_idx].size = max(rw_ptr+length, inode_table[inode_idx].size);
 
         fd_t *tmpf = calloc(1, sizeof(fd_t));
         tmpf = &open_fd_table[fileID];
         tmpf->rw_ptr += length;
         memcpy((void*)&open_fd_table[fileID], (void*)tmpf, sizeof(fd_t));
-        //open_fd_table[fileID].rw_ptr += length;
+
         return length;
     }
 
@@ -706,13 +693,12 @@ int sfs_fwrite(int fileID, const char *buf, int length)
     tmpi = &inode_table[inode_idx];
     tmpi->size = max(rw_ptr+length, inode_table[inode_idx].size);
     memcpy((void*)&inode_table[inode_idx], (void*)tmpi, sizeof(inode_t));
-    //inode_table[inode_idx].size = max(rw_ptr+length, inode_table[inode_idx].size);
 
     fd_t *tmpf = calloc(1, sizeof(fd_t));
     tmpf = &open_fd_table[fileID];
     tmpf->rw_ptr += length;
     memcpy((void*)&open_fd_table[fileID], (void*)tmpf, sizeof(fd_t));
-    //open_fd_table[fileID].rw_ptr += length;
+
     return length;
 }
 
@@ -741,7 +727,7 @@ int sfs_fseek(int fileID, int loc)
     temp = &open_fd_table[fileID];
     temp->rw_ptr = min(inode_table[open_fd_table[fileID].inode_idx].size, loc);
     memcpy((void *)&open_fd_table[fileID], (void*)temp, sizeof(fd_t));
-    //open_fd_table[fileID].rw_ptr = min(inode_table[open_fd_table[fileID].inode_idx].size, loc);
+
 	  return 0;
 }
 
@@ -790,15 +776,8 @@ int sfs_remove(char *file)
     tmpi->mode = 0;
     tmpi->link_cnt = 0;                     // if link_cnt == 0, means the inode is free; automatically = 0 in this sfs as we only maintain 1 link to a given file
     memcpy((void*)&inode_table[inode_idx], (void*)tmpi, sizeof(inode_t));
-
-    //inode_table[ROOT_NUM].size -= sizeof(dir_entry_t);
-    //inode_table[inode_idx].mode = 0;
-    //inode_table[inode_idx].link_cnt = 0;    // if link_cnt == 0, means the inode is free; automatically = 0 in this sfs as we only maintain 1 link to a given file
-    //inode_table[inode_idx].size = 0;
-
     // write inode to disk
     write_inode_by_index(inode_idx);
-
 
     // clear data blocks, update bitmap
     char *bitmapFromDisk;
@@ -812,7 +791,6 @@ int sfs_remove(char *file)
         tmpi = &inode_table[inode_idx];
         tmpi->direct_ptrs[i] = -1;
         memcpy((void*)&inode_table[inode_idx], (void*)tmpi, sizeof(inode_t));
-        //inode_table[inode_idx].direct_ptrs[i] = -1;
         bitmapFromDisk[p/BLOCK_SIZE]++;
         free_blocks[p] = 1;
     }
@@ -832,7 +810,6 @@ int sfs_remove(char *file)
         tmpi = &inode_table[inode_idx];
         tmpi->indirect_ptr = 0;
         memcpy((void*)&inode_table[inode_idx], (void*)tmpi, sizeof(inode_t));
-        //inode_table[inode_idx].indirect_ptr = 0;
     }
 
     // write bitmap blocks to disk
@@ -882,6 +859,6 @@ int sfs_remove(char *file)
         write_blocks(start_dir_block+i, 1, (void*)buf1);
     }
 
-    printf("File removed from file system");
+    printf("File removed from file system.\n");
     return 0;
 }

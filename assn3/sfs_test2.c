@@ -116,7 +116,7 @@ main(int argc, char **argv)
     }
     filesize[i] = (rand() % (MAX_BYTES-MIN_BYTES)) + MIN_BYTES;
   }
-  sfs_remove(names[0]);
+  //sfs_remove(names[0]);
   for (i = 0; i < 2; i++) {
     for (j = i + 1; j < 2; j++) {
       if (fds[i] == fds[j]) {
@@ -174,11 +174,7 @@ main(int argc, char **argv)
 
   /* Just to be cruel - attempt to read from a closed file handle.
    */
-   printf("Yo\n");
-   int r = sfs_fread(fds[1], fixedbuf, sizeof(fixedbuf));
-   if (r > 0) {
-  //if (sfs_fread(fds[1], fixedbuf, sizeof(fixedbuf)) > 0) {
-    printf("Yo1\n");
+   if (sfs_fread(fds[1], fixedbuf, sizeof(fixedbuf)) > 0) {
     fprintf(stderr, "ERROR: read from a closed file handle?\n");
     error_count++;
   }
