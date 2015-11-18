@@ -1,19 +1,17 @@
-To build you code run the following commands
+To build, run the following:
 
 $ make clean
 $ make
 
-This will give you an executable named "sfs" in your current directory 
-which you can use to mount your filesystem
+This will produce an executable named "sfs" in the current directory, which allows for mounting of the filesystem
 
 $ ./sfs /tmp/mymountpoint -d
 
-You can test your code by running the test case file provided. You can do that 
-with the following commands
+To test the code, run
 
 $ make test1
 
-This will create a file named "sfs_test1" in your current directory. Run the test by running the file
+This will create a file named "sfs_test1" in the current directory. Run the test by running the file
 
 $ ./sfs_test1
 

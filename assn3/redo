@@ -6,6 +6,8 @@ make
 printf "\n"
 ./sfs tmp/mntpt -d
 make test1
+make test2
 printf "\n"
 clear
 ./sfs_test1
+#./sfs_test2
