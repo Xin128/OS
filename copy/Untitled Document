@@ -1,5 +1,0 @@
-Note:
-
-Use the provided Makefile; it includes the -lm option which links the math.h library, which I use in the API.
-
-Also, around lines 277-290, I commented out some code, which sets all values in the open file descriptor table to free (as should be the case), which allows both test files run through in their entirety and produce less errors.
