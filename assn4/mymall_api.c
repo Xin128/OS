@@ -25,7 +25,6 @@ struct frblk_t {
 };
 
 frblk_t* frblk_list;     	// doubly linked list holds all free blocks
-void* ptr_list;
 int alloc_policy = FIRST_FIT;   // default
 int total_alloc_bytes = 0;
 int total_free_bytes = 0;
@@ -35,9 +34,6 @@ void set_end_tag(tag_t* itag);
 tag_t* get_end_tag(tag_t* itag);
 int insert_to_free_list(frblk_t* to_in);
 void merge_blocks(frblk_t* first, frblk_t* second);
-int add_to_active_list(void* ptr);
-int remove_from_active_list(void* ptr);
-int is_active_ptr(void* ptr);
 
 
 /* API FUNCTIONS ---------------------------------------------------------------------------------------------------- */
@@ -46,6 +42,13 @@ int is_active_ptr(void* ptr);
  * if memory cannot be allocated, returns NULL and sets global error string var */
 void *my_malloc(int size)
 {
+    if (size <= 0) {
+        strcpy(my_malloc_error, "ERROR: Must allocate 1 or more bytes.\n");
+        return NULL;
+    }
+
+    if (frblk_list == sbrk(0))
+        frblk_list = NULL;
     frblk_t *curr_block = frblk_list, *frblk=NULL, *frblk_new, *nex;
     tag_t* itag;
     int reinsert=0, dec=0;
@@ -54,7 +57,7 @@ void *my_malloc(int size)
 	base = sbrk(0);
 
     // first scan list of free memory blocks previously released by my_free() to find one whose size is >= one to be allocated
-    if (alloc_policy == FIRST_FIT)      // first fit allocation - allocate first block large enough
+    if (alloc_policy == FIRST_FIT) {     // first fit allocation - allocate first block large enough
         while (curr_block != NULL) {
             if (curr_block->tag.length >= size) {
                 frblk = curr_block;
@@ -62,6 +65,7 @@ void *my_malloc(int size)
             }
             curr_block = curr_block->next;
         }
+    }
     else                                // best fit allocation - allocate smallest block large enough
         while (curr_block != NULL) {
             if (curr_block->tag.length >= size) {
@@ -79,26 +83,27 @@ void *my_malloc(int size)
 	 * (size of one set is already accounted for in the free block), split the block into an allocated block
 	 * of the right size, plus the excess free block (and put onto linked list) */
 	if ((int)(frblk->tag.length) >= (int)(size + MIN_EXCESS_SPLIT + 2*sizeof(tag_t))) {
-	    nex = frblk->next;		// TODO: part of the hack below
+	    nex = frblk->next;		// for later resetting
 	    dec = frblk->tag.length;
 	    // reset length and status of new used block
 	    itag = &(frblk->tag);
 	    itag->length = size;
 	    itag->stat = USED;
 	    set_end_tag(itag);
+      printf("get end: %p, %p\n", itag, get_end_tag(itag));
 	    // set tags of new free block
 	    tag_t* next_tag = get_end_tag(itag) + 1;
 	    next_tag->length = dec - size - 2*sizeof(tag_t);
 	    set_end_tag(next_tag);
 	    // put new free block into free block linked list
 	    frblk_new = (frblk_t*)((void*)next_tag);
-      frblk_new->next = frblk->next;
+	    frblk_new->next = frblk->next;
 	    reinsert = 1;
 	}
 
 	frblk_t *p, *n;
         if (frblk == frblk_list) {
-	    // TODO: hack: somehow the memory address gets reset to something beyond normal memory bounds
+	    // memory address sometimes reset to something beyond normal memory bounds
 	    if ((void*)(frblk_list->next) > (void*)0x1000000000000)
 		frblk_list = nex;
 	    else
@@ -108,7 +113,7 @@ void *my_malloc(int size)
         }
         else {
             p = frblk->prev;
-            n = frblk->next;
+            n = nex;
             p->next = n;
 	    if (n != NULL)
         	n->prev = p;
@@ -139,12 +144,6 @@ void *my_malloc(int size)
     set_end_tag(itag);
     total_alloc_bytes += itag->length;
 
-    // TODO
-    if (add_to_active_list((void*)&itag[1]) < -1) {
-        strcpy(my_malloc_error, "WARNING: Memory allocated but pointer not added to list of actively allocated pointers.\n");
-        return NULL;
-    }
-
     char buf[100];
     sprintf(buf, "Allocated %d bytes at address %p", size, (void*)&itag[1]);
     puts(buf);
@@ -164,22 +163,10 @@ int my_free(void *ptr)
         return -1;
     }
 
-    // TODO: check if address was previously malloced at all and is still "active"
-    if (is_active_ptr(ptr) < 0) {
-        strcpy(my_malloc_error, "ERROR: Pointer not previously allocated; nothing freed.\n");
-        return -1;
-    }
-
     frblk_t *frblk = (frblk_t *) ((char *) ptr - sizeof(tag_t));    // ptr points to data, decrement to beginning of block
     total_alloc_bytes -= frblk->tag.length;
     if (insert_to_free_list(frblk) < -1)
 	return -1;
-
-    // TODO: remove address form list of previously malloced memory pionters which are still "active"
-    if (remove_from_active_list(ptr) < -1) {
-        strcpy(my_malloc_error, "WARNING: Memory freed but still contained in list of actively allocated pointers.\n");
-        return -1;
-    }
 
     return 0;
 }
@@ -197,7 +184,7 @@ void my_mallinfo()
 {
     int cont_free_space = 0;
     frblk_t* frblk_it = frblk_list;
-    while (frblk_it != NULL) {
+    while (frblk_it != NULL) {// && (void*)frblk_it != base) {
         cont_free_space = (frblk_it->tag.length > cont_free_space) ? frblk_it->tag.length : cont_free_space;
         frblk_it = frblk_it->next;
     }
@@ -205,21 +192,18 @@ void my_mallinfo()
     char buf[200];
     sprintf(buf, "\n----- MYMALL INFO -----\nTotal memory allocated: %d bytes\nTotal free space: %d bytes\nLargest contiguous free space: %d bytes\n-----------------------\n", total_alloc_bytes, total_free_bytes, cont_free_space);
     puts(buf);
-
+    return;
 }
 
 
 /* HELPER FUNCTIONS ------------------------------------------------------------------------------------------------- */
 
 
-/* sets the end tag to be the same as the start tag
- * TODO: note: some strange error occurs some of the time, where the value of the associated free block's
- * next ptr is reset, so I reset it manually for now, with the tmp ptr, as I'm not entirely sure
- * what's going on */
+/* sets the end tag to be the same as the start tag */
 void set_end_tag(tag_t* itag)
 {
     frblk_t *g = (frblk_t*)itag;
-    frblk_t *tmp = g->next;
+    frblk_t *tmp = g->next;       // somtimes resets, so reset manually
     tag_t* ftag = get_end_tag(itag);
     ftag->length = itag->length;
     g->next = tmp;
@@ -241,6 +225,8 @@ tag_t* get_end_tag(tag_t* itag)
  * also merges if the free block to insert is adjacent to any other free blocks
  * and reduces size of program break if the last free block is >= LAST_BLOCK_MAX_BYTES */
 int insert_to_free_list(frblk_t* to_in) {
+    int merge_flag = 0;
+
     // insert free blocks into free block linked list
     if (frblk_list == NULL) {
 	to_in->next = NULL;
@@ -287,19 +273,24 @@ int insert_to_free_list(frblk_t* to_in) {
         // get end tag of previous block
         tag = (tag_t *)to_in;
         tag--;                  // start tag of current block adjacent to end tag of previous block
-        if (tag->stat == FREE)
+        if (tag->stat == FREE) {
             merge_blocks(to_in->prev, to_in);
+            to_in = to_in->prev;
+            merge_flag = 1;
+        }
     }
 
     if (to_in->next != NULL) {
         // get start tag of next block
         tag = get_end_tag(&(to_in->tag));
         tag++;                  // start tag of next block adjacent to end tag of current block;
-        if (tag->stat == FREE)
+        if (tag->stat == FREE) {
             merge_blocks(to_in, to_in->next);
+            merge_flag = 1;
+        }
     }
 
-    // should reduce program break if top free block is larger than 128 kb
+    // should reduce program break if top free block is larger than LAST_BLOCK_MAX_BYTES
     if ((to_in->next == NULL) && (to_in->tag.length >= LAST_BLOCK_MAX_BYTES)) {
         int redux = 0;
         char *last_heap_addr, *last_block_addr;
@@ -316,12 +307,17 @@ int insert_to_free_list(frblk_t* to_in) {
         // check for allocated data blocks following
         if (last_block_addr == last_heap_addr) {
             redux = to_in->tag.length + 2*sizeof(tag_t);
-            sbrk(-redux);
             to_in->tag.length -= redux;
+            if (to_in->tag.length == -16)
+                to_in->tag.length += 16;
             set_end_tag(&(to_in->tag));
+            sbrk(-redux);
+            total_free_bytes += 16;
         }
 
         total_free_bytes -= redux;
+        if (total_free_bytes == 0)
+            frblk_list = NULL;
     }
 
     return 0;
@@ -337,31 +333,10 @@ void merge_blocks(frblk_t* first, frblk_t* second)
     puts(start);
     first->next = second->next;
     first->tag.length += (2*sizeof(tag_t) + second->tag.length);
-    // gain two tags of free space from the merge
-    total_free_bytes += 2*sizeof(tag_t);
+    total_free_bytes += 2*sizeof(tag_t);  // gain two tags of free space from the merge
     set_end_tag(&(first->tag));
+    second->tag.length = first->tag.length;
     char end[10] = "Merged!";
     puts(end);
     return;
-}
-
-
-// TODO
-/* add pointer to list of pointers of currently allocated memory blocks */
-int add_to_active_list(void* ptr) {
-    return 0;
-}
-
-
-// TODO
-/* remove pointer from list of pointers of currently allocated memory blocks */
-int remove_from_active_list(void* ptr) {
-    return 0;
-}
-
-
-// TODO
-/* check if pointer is in list of pointers of currently allocated memory blocks */
-int is_active_ptr(void* ptr) {
-    return 0;
 }
